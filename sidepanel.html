@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VC Invoice Scraper</title>
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/icon16.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="icons/icon48.png">
+  <link rel="icon" type="image/png" sizes="128x128" href="icons/icon128.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+
+<body>
+  <!-- ═══ HEADER ═══ -->
+  <div class="header-container">
+    <h3 class="h3-main">
+      <div class="h3-title-wrap">
+        <img src="icons/icon128.png" alt="Logo" class="sp-logo-img">
+        <span id="mainTitle">VC Invoice Scraper</span> <span class="badge" id="versionTag"></span>
+      </div>
+      <button id="themeToggle" title="Toggle Dark Mode" aria-label="Toggle Dark Mode">🌙</button>
+    </h3>
+  </div>
+
+  <!-- ═══ SCROLLABLE CONTENT ═══ -->
+  <div class="scrollable-middle">
+
+    <!-- 1. Vendor Code -->
+    <div class="group" id="vendorCodeGroup">
+      <h3 class="container-title">Vendor Code</h3>
+      <div class="input-with-badge">
+        <input type="text" id="vendorCode" placeholder="e.g. DRIBB" maxlength="5" autocomplete="off" spellcheck="false">
+        <span class="validation-badge" id="vendorBadge"></span>
+      </div>
+    </div>
+
+    <!-- 2. Invoice Numbers -->
+    <div class="group" id="invoiceGroup">
+      <div class="group-header">
+        <h3 class="container-title">Invoice Numbers</h3>
+        <div class="header-actions">
+          <span class="badge count-badge" id="invoiceCount">0 lines</span>
+          <button id="clearInvoicesBtn" class="icon-btn" title="Clear All" aria-label="Clear All">✕</button>
+        </div>
+      </div>
+      <textarea id="invoiceNumbers" rows="6"
+        placeholder="Paste invoice numbers, one per line:&#10;8829856-1&#10;8829857-1&#10;8829857-2&#10;8829858-1"></textarea>
+    </div>
+
+    <!-- 3. Configure -->
+    <div class="group" id="configGroup">
+      <h3 class="container-title">Configure</h3>
+      <div class="slider-row">
+        <label for="parallelTabs">Parallel Tabs</label>
+        <div class="slider-control">
+          <input type="range" id="parallelTabs" min="2" max="15" value="5" class="range-slider">
+          <span class="badge slider-value-badge" id="parallelValue">5</span>
+        </div>
+        <div class="slider-hints">
+          <span>2</span>
+          <span class="slider-hint-text">Simultaneous invoice tabs</span>
+          <span>15</span>
+        </div>
+      </div>
+
+      <div class="slider-row mt-16">
+        <label for="pageWaitTime">Page Wait Time</label>
+        <div class="slider-control">
+          <input type="range" id="pageWaitTime" min="1" max="5" value="2" class="range-slider">
+          <span class="badge slider-value-badge" id="pageWaitValue">2s</span>
+        </div>
+        <div class="slider-hints">
+          <span>1s</span>
+          <span class="slider-hint-text">Wait before reading data</span>
+          <span>5s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Alert Modal Overlay -->
+    <div id="alertOverlay">
+      <div class="modal-content">
+        <div class="modal-icon" id="modalIcon">✓</div>
+        <h4 class="modal-title" id="modalTitle">Job Complete</h4>
+        <div id="alertMessage" class="modal-text"></div>
+        <div class="modal-actions">
+          <button id="copyFailedBtn" class="btn btn-secondary hidden mb-8">Copy Failed</button>
+          <button id="alertOkBtn" class="btn modal-btn">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Captcha Pause Overlay -->
+    <div id="captchaOverlay" class="captcha-overlay">
+      <div class="modal-content">
+        <div class="modal-icon error">⚠️</div>
+        <h4 class="modal-title">Action Required</h4>
+        <div class="modal-text">Amazon has requested a Captcha or rate-limited the connection. Please solve it in the
+          active browser tab, then click Resume to continue.</div>
+        <button id="resumeCaptchaBtn" class="btn modal-btn captcha-btn">Resume Scraping</button>
+      </div>
+    </div>
+
+    <!-- 6. Data Preview Modal Overlay -->
+    <div id="previewOverlay" class="modal-overlay">
+      <div class="modal-content preview-modal">
+        <div class="modal-header">
+          <h4 class="modal-title">Data Preview (First 10 rows)</h4>
+          <button id="closePreviewBtn" class="close-x">✕</button>
+        </div>
+        <div class="preview-container">
+          <table id="previewTable">
+            <thead id="previewHead"></thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+        <div class="modal-actions">
+          <button id="previewOkBtn" class="btn modal-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <div class="footer-container">
+
+    <!-- Recovery UI (hidden unless saved progress found) -->
+    <div id="recoveryUi" class="recovery-ui hidden">
+      <div class="recovery-text">
+        <strong>Saved Session Found</strong><br>
+        <span id="recoveryDetails">0 rows, 0 failed</span>
+      </div>
+      <div class="recovery-actions">
+        <button id="resumeBtn" class="btn btn-small">▶ Resume</button>
+        <button id="clearBtn" class="btn btn-small btn-secondary">Clear</button>
+      </div>
+    </div>
+
+    <!-- Status / Progress Area -->
+    <div id="status">
+      Ready. Enter a Vendor Code and paste Invoice Numbers to begin.
+    </div>
+
+    <!-- Collapsible Log UI -->
+    <div class="log-accordion">
+      <button id="logToggleBtn" class="log-toggle hidden">
+        <span>Activity Log</span>
+        <span id="logToggleIcon">▼</span>
+      </button>
+      <div id="invoiceLog" class="invoice-log"></div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="main-actions">
+      <div class="primary-row">
+        <button id="startBtn" class="btn" disabled>▶ Start Scraping</button>
+        <button id="stopBtn" class="btn">⏹ Stop Scraping</button>
+      </div>
+      <div class="report-row">
+        <button id="downloadBtn" class="btn">📊 Download Excel</button>
+        <button id="downloadCsvBtn" class="btn btn-secondary">📄 Download CSV</button>
+      </div>
+    </div>
+
+    <!-- Results Summary (hidden until complete) -->
+    <div id="resultsSummary" class="results-summary hidden">
+      <div class="summary-stats">
+        <span class="stat-item text-success"><strong id="statRows">0</strong> rows</span>
+        <span class="stat-divider">•</span>
+        <span class="stat-item text-danger"><strong id="statFailed">0</strong> failed</span>
+      </div>
+      <div class="summary-actions">
+        <button id="previewBtn" class="btn btn-small btn-outline">👁️ Preview</button>
+        <button id="retryFailedBtn" class="btn btn-small btn-danger hidden">🔄 Retry Failed</button>
+      </div>
+    </div>
+
+    <div class="signature">
+      <div class="credit-text">
+        Created with ❤️ by <a href="https://www.linkedin.com/in/famesh-thakre-6a2825118" target="_blank" rel="noopener"
+          class="credit-link">TransFamesh</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="lib/xlsx.full.min.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+
+</html>

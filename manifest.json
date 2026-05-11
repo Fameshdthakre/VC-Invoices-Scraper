@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "VC Invoices Scraper",
+  "version": "1.0.3",
+  "description": "Scrape invoice line-item data from Amazon Vendor Central and export to Excel.",
+  "permissions": [
+    "scripting",
+    "tabs",
+    "activeTab",
+    "sidePanel",
+    "storage",
+    "alarms",
+    "unlimitedStorage",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://vendorcentral.amazon.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
