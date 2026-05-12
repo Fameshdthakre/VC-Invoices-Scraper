@@ -44,15 +44,14 @@ async function startKeepAlive() {
 
 async function stopKeepAlive() {
   chrome.alarms.clear(KEEPALIVE_ALARM);
-  isScraping = false;
   await closeOffscreenDocument();
+  isScraping = false;
 }
 
-// Alarm fires periodically to keep the service worker alive while scraping.
-// The mere act of receiving the alarm event prevents the worker from suspending.
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name !== KEEPALIVE_ALARM) return;
-  // No-op: receiving this event is sufficient to keep the worker alive.
+  if (alarm.name === KEEPALIVE_ALARM && isScraping) {
+    // poke worker
+  }
 });
 
 // ═══════════════════════════════════════════
@@ -114,11 +113,8 @@ chrome.runtime.onConnect.addListener((port) => {
   port.onDisconnect.addListener(() => {
     activePort = null;
     // If sidepanel closes while scraping, abort
-    if (isScraping) {
-      isAborted = true;
-      isScraping = false;
-      closeAllActiveTabs();
-    }
+    isAborted = true;
+    closeAllActiveTabs();
   });
 });
 
@@ -176,10 +172,9 @@ function sendComplete(headers, rows, failedInvoices) {
   });
 }
 
-function sendPartialData(headers, rows) {
+function sendPartialData(rows) {
   sendToPanel({
     type: "PARTIAL_DATA",
-    headers,
     rows,
   });
 }
@@ -479,7 +474,7 @@ async function scrapeInvoicePage(pageWaitSec, invoiceId) {
     // 4. Pagination loop
     while (true) {
       // Re-query Next button with a small wait if missing
-      let nextLi = await waitForPagination(10000);
+      let nextLi = await waitForPagination(3000);
 
       if (!nextLi || nextLi.classList.contains("a-disabled")) break;
 
@@ -603,25 +598,29 @@ async function processSingleInvoice(tabId, invoiceNumber, vendorCode, pageWait) 
   const url = buildInvoiceUrl(invoiceNumber, vendorCode);
   await chrome.tabs.update(tabId, { url });
 
-  // Wait for page to load
-  await waitForTabLoad(tabId);
-
-  // Extra settle time (increased for stability)
-  await new Promise(r => setTimeout(r, 6000));
-
-  // Inject and scrape
-  let result = await injectAndScrape(tabId, pageWait, invoiceNumber);
-
-  // Retry once on failure (but not captchas)
-  if (!result.success && result.error !== "CAPTCHA_DETECTED") {
-    sendLog(`[${invoiceNumber}] Retrying load...`, "warning");
-    await chrome.tabs.reload(tabId);
+  try {
+    // Wait for page to load
     await waitForTabLoad(tabId);
-    await new Promise(r => setTimeout(r, 7000));
-    result = await injectAndScrape(tabId, pageWait, invoiceNumber);
-  }
 
-  return result;
+    // Extra settle time (increased for stability)
+    await new Promise(r => setTimeout(r, 6000));
+
+    // Inject and scrape
+    let result = await injectAndScrape(tabId, pageWait, invoiceNumber);
+
+    // Retry once on failure (but not captchas)
+    if (!result.success && result.error !== "CAPTCHA_DETECTED") {
+      sendLog(`[${invoiceNumber}] Retrying load...`, "warning");
+      await chrome.tabs.reload(tabId);
+      await waitForTabLoad(tabId);
+      await new Promise(r => setTimeout(r, 7000));
+      result = await injectAndScrape(tabId, pageWait, invoiceNumber);
+    }
+
+    return result;
+  } catch (err) {
+    throw err;
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -635,40 +634,6 @@ const DEFAULT_HEADERS = [
   "Last received date", "ASIN received",
   "Quantity received", "Unit cost", "Amount received"
 ];
-
-// ═══════════════════════════════════════════
-//  CAPTCHA BLOCK HANDLER (shared)
-//  Pauses scraping and waits for user to
-//  resolve the captcha in the active tab.
-// ═══════════════════════════════════════════
-async function handleCaptchaBlock(tabId, invoiceNumber) {
-  isPaused = true;
-  sendLog(`⚠️ Captcha on ${invoiceNumber}. Paused — solve it in the active tab.`, "warning");
-  sendToPanel({ type: "PAUSED_CAPTCHA" });
-  await chrome.tabs.update(tabId, { active: true });
-  try {
-    const tabInfo = await chrome.tabs.get(tabId);
-    await chrome.windows.update(tabInfo.windowId, { focused: true });
-  } catch (e) { /* tab may have been closed */ }
-  await new Promise(r => pauseResolvers.push(r));
-}
-
-// ═══════════════════════════════════════════
-//  SAVE SESSION (shared helper)
-// ═══════════════════════════════════════════
-async function saveSession(vendorCode, invoiceNumbers, combinedRows, failedInvoices, completedCount, total, headers) {
-  await chrome.storage.local.set({
-    savedSession: {
-      vendorCode,
-      invoiceNumbers,
-      combinedRows,
-      failedInvoices,
-      completedCount,
-      totalInvoices: total,
-      headers
-    }
-  });
-}
 
 // ═══════════════════════════════════════════
 //  BATCH PROCESSING ENGINE
@@ -708,7 +673,7 @@ async function executeScrapeLoop(vendorCode, invoiceNumbers, parallelCount, page
   let headersCaptured = (state.headers && state.headers.length > 0);
 
   // Clamp parallelCount to valid range
-  parallelCount = Math.max(2, Math.min(15, parallelCount));
+  parallelCount = Math.max(3, Math.min(15, parallelCount));
 
   // Start keep-alive alarm to prevent service worker from dying
   startKeepAlive();
@@ -771,7 +736,15 @@ async function executeScrapeLoop(vendorCode, invoiceNumbers, parallelCount, page
               }
               return; // Done
             } else if (result.error === "CAPTCHA_DETECTED") {
-              await handleCaptchaBlock(tabId, invoiceNumber);
+              isPaused = true;
+              sendLog(`⚠️ Captcha on ${invoiceNumber}. Paused.`, "warning");
+              sendToPanel({ type: "PAUSED_CAPTCHA" });
+              await chrome.tabs.update(tabId, { active: true });
+              try {
+                const tabInfo = await chrome.tabs.get(tabId);
+                await chrome.windows.update(tabInfo.windowId, { focused: true });
+              } catch (e) { }
+              await new Promise(r => pauseResolvers.push(r));
               continue; // Retry loop
             } else {
               failedInvoices.push(invoiceNumber);
@@ -781,7 +754,15 @@ async function executeScrapeLoop(vendorCode, invoiceNumbers, parallelCount, page
             }
           } catch (err) {
             if (err.message === "CAPTCHA_DETECTED") {
-              await handleCaptchaBlock(tabId, invoiceNumber);
+              isPaused = true;
+              sendLog(`⚠️ Captcha on ${invoiceNumber}. Paused.`, "warning");
+              sendToPanel({ type: "PAUSED_CAPTCHA" });
+              await chrome.tabs.update(tabId, { active: true });
+              try {
+                const tabInfo = await chrome.tabs.get(tabId);
+                await chrome.windows.update(tabInfo.windowId, { focused: true });
+              } catch (e) { }
+              await new Promise(r => pauseResolvers.push(r));
               continue; // Retry
             } else {
               failedInvoices.push(invoiceNumber);
@@ -812,10 +793,20 @@ async function executeScrapeLoop(vendorCode, invoiceNumbers, parallelCount, page
       sendProgress(completedCount, total, activeTabs.size, parallelCount, `Batch ${batchNum}/${totalBatches} done`, combinedRows.length);
 
       // ── PROGRESSIVE SAVE ──
-      sendPartialData(headers, combinedRows);
+      sendPartialData(combinedRows);
 
       // Save session to storage for recovery
-      await saveSession(vendorCode, invoiceNumbers, combinedRows, failedInvoices, completedCount, total, headers);
+      await chrome.storage.local.set({
+        savedSession: {
+          vendorCode,
+          invoiceNumbers,
+          combinedRows,
+          failedInvoices,
+          completedCount,
+          totalInvoices: total,
+          headers: headers
+        }
+      });
 
       // Anti-bot delay between batches: 3–10 seconds (skip after the last batch)
       if (batchEnd < total && !isAborted) {
@@ -851,13 +842,21 @@ async function executeScrapeLoop(vendorCode, invoiceNumbers, parallelCount, page
             try {
               result = await processSingleInvoice(tabId, invoiceNumber, vendorCode, retryWait);
               if (result.error === "CAPTCHA_DETECTED") {
-                await handleCaptchaBlock(tabId, invoiceNumber);
+                isPaused = true;
+                sendLog(`⚠️ Captcha on ${invoiceNumber}. Paused.`, "warning");
+                sendToPanel({ type: "PAUSED_CAPTCHA" });
+                await chrome.tabs.update(tabId, { active: true });
+                await new Promise(r => pauseResolvers.push(r));
                 continue;
               }
               break;
             } catch (err) {
               if (err.message === "CAPTCHA_DETECTED") {
-                await handleCaptchaBlock(tabId, invoiceNumber);
+                isPaused = true;
+                sendLog(`⚠️ Captcha on ${invoiceNumber}. Paused.`, "warning");
+                sendToPanel({ type: "PAUSED_CAPTCHA" });
+                await chrome.tabs.update(tabId, { active: true });
+                await new Promise(r => pauseResolvers.push(r));
                 continue;
               }
               throw err;
@@ -870,11 +869,17 @@ async function executeScrapeLoop(vendorCode, invoiceNumbers, parallelCount, page
             sendInvoiceDone(invoiceNumber, result.rows.length, "success");
             sendLog(`✅ ${invoiceNumber} recovered!`, "success");
             // Also update storage
-            await saveSession(
-              vendorCode, invoiceNumbers, combinedRows,
-              [...failedInvoices, ...retryList.slice(i + 1)],
-              completedCount, total, headers
-            );
+            await chrome.storage.local.set({
+              savedSession: {
+                vendorCode,
+                invoiceNumbers,
+                combinedRows,
+                failedInvoices: [...failedInvoices, ...retryList.slice(i + 1)],
+                completedCount,
+                totalInvoices: total,
+                headers: headers
+              }
+            });
           } else {
             failedInvoices.push(invoiceNumber);
             sendInvoiceDone(invoiceNumber, 0, "failed");
@@ -893,11 +898,8 @@ async function executeScrapeLoop(vendorCode, invoiceNumbers, parallelCount, page
     }
 
   } finally {
-    // Play notification BEFORE closing the offscreen document so it can play.
-    playNotification(failedInvoices.length > 0 || isAborted);
-
-    // Stop keep-alive alarm and close offscreen document
-    await stopKeepAlive();
+    // Always stop keep-alive when done (even on abort/error)
+    stopKeepAlive();
 
     // Clean up Tab Pool
     sendLog("Closing tab pool...", "info");
@@ -908,10 +910,23 @@ async function executeScrapeLoop(vendorCode, invoiceNumbers, parallelCount, page
       await chrome.storage.local.remove("savedSession");
     } else if (!isAborted && failedInvoices.length > 0) {
       // Keep session for "Retry Failed" action if some failed
-      await saveSession(vendorCode, invoiceNumbers, combinedRows, failedInvoices, total, total, headers);
+      await chrome.storage.local.set({
+        savedSession: {
+          vendorCode,
+          invoiceNumbers,
+          combinedRows,
+          failedInvoices,
+          completedCount: total,
+          totalInvoices: total,
+          headers: headers
+        }
+      });
     }
 
-    // Send final result (including partial data on abort)
-    sendComplete(headers, combinedRows, failedInvoices);
+    // Play notification sound via Offscreen
+    playNotification(failedInvoices.length > 0 || isAborted);
   }
+
+  // Send final result (including partial data on abort)
+  sendComplete(headers, combinedRows, failedInvoices);
 }

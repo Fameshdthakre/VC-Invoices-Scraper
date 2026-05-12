@@ -102,7 +102,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ═══════════════════════════════════════════
   // Restore saved value
   const { parallelCount: savedParallel } = await chrome.storage.local.get("parallelCount");
-  if (savedParallel && savedParallel >= 2 && savedParallel <= 15) {
+  if (savedParallel && savedParallel >= 3 && savedParallel <= 15) {
     parallelTabsSlider.value = savedParallel;
     parallelValueBadge.textContent = savedParallel;
   }
@@ -195,9 +195,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   //  PORT CONNECTION
   // ═══════════════════════════════════════════
   function connectPort() {
-    // Avoid creating a duplicate connection if one is already active
-    if (port) return;
-
     port = chrome.runtime.connect({ name: "sidepanel" });
 
     port.onMessage.addListener((msg) => {
@@ -359,7 +356,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }, 1000);
     }
 
-    // Update interval will handle the ETR from here on
     cachedProgressElements.progText.textContent = `${completedInvoices}/${totalInvoices}`;
     cachedProgressElements.rowsText.textContent = `📊 ${totalRows} rows`;
     cachedProgressElements.tabsText.textContent = `📌 ${activeTabs} tab${activeTabs !== 1 ? "s" : ""} active`;
@@ -367,6 +363,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? `Latest: ${invoiceNumber}`
       : "Starting tabs…";
     cachedProgressElements.progBar.style.width = `${percentage}%`;
+    if (scrapeStartTime) {
+      const elapsedMs = Date.now() - scrapeStartTime;
+      if (completedInvoices > 0) {
+        const avgTimePerInvoice = elapsedMs / completedInvoices;
+        const remainingInvoices = totalInvoices - completedInvoices;
+        const etrMs = avgTimePerInvoice * remainingInvoices;
+        cachedProgressElements.elapsedText.textContent = `⏱ ${formatElapsed(elapsedMs)} (ETR: ${formatElapsed(etrMs)})`;
+      } else {
+        cachedProgressElements.elapsedText.textContent = `⏱ ${formatElapsed(elapsedMs)}`;
+      }
+    }
 
     // Render active tab dots
     const dotsHtml = [];
@@ -382,22 +389,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!collectedData) {
       collectedData = { headers: [], rows: [], failedInvoices: [] };
     }
-    // Update both rows AND headers so a mid-scrape download has correct columns
-    if (msg.headers && msg.headers.length > 0) {
-      collectedData.headers = msg.headers;
-    }
     collectedData.rows = msg.rows;
     // Allow download of partial data
     downloadBtn.style.display = "flex";
     downloadCsvBtn.style.display = "flex";
-    validateInputs();
   }
 
   function handleInvoiceDone(msg) {
-    // Update the results summary row count live as invoices complete
-    if (resultsSummary && !resultsSummary.classList.contains("hidden")) {
-      statRows.textContent = collectedData ? collectedData.rows.length : 0;
-    }
+    // Optional: could log individual invoice results
   }
 
   function handleComplete(msg) {
@@ -438,11 +437,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     statusDiv.appendChild(b);
     if (failedCount > 0) {
       statusDiv.appendChild(
-        document.createTextNode(` ${totalRows} rows extracted in ${elapsed}. ${failedCount} invoice(s) failed.`)
+        document.createTextNode(` ${totalRows} rows extracted in ${elapsed} mm:ss. ${failedCount} invoice(s) failed.`)
       );
     } else {
       statusDiv.appendChild(
-        document.createTextNode(` ${totalRows} rows extracted successfully in ${elapsed}.`)
+        document.createTextNode(` ${totalRows} rows extracted successfully in ${elapsed} mm:ss.`)
       );
     }
 

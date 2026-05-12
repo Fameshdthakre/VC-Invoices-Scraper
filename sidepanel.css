@@ -18,11 +18,8 @@
   --warning-light: #fef3c7;
   --bg-body: #eef2ff;
   --bg-card: rgba(255, 255, 255, 0.95);
-  --bg-hover: rgba(0, 0, 0, 0.04);
   --text-main: #1f2937;
   --text-muted: #6b7280;
-  --text-primary: var(--primary);
-  --glass: rgba(255, 255, 255, 0.6);
   --border-color: #e5e7eb;
   --input-bg: #f9fafb;
   --input-focus-bg: #ffffff;
@@ -39,11 +36,8 @@
 [data-theme="dark"] {
   --bg-body: #0f172a;
   --bg-card: #1e293b;
-  --bg-hover: rgba(255, 255, 255, 0.06);
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
-  --text-primary: #818cf8;
-  --glass: rgba(30, 41, 59, 0.7);
   --border-color: #334155;
   --input-bg: #0f172a;
   --input-focus-bg: #1e293b;
@@ -702,6 +696,11 @@ textarea {
   justify-content: center;
 }
 
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+  margin-bottom: 0;
+}
 
 .btn-outline {
   background: transparent;
@@ -729,9 +728,38 @@ textarea {
   display: none !important;
 }
 
+.flex-important {
+  display: flex !important;
+}
+
 .disabled-ui {
   pointer-events: none !important;
   opacity: 0.6 !important;
+}
+
+/* ── Delay indicator during scraping ── */
+.delay-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--warning);
+  margin-top: 6px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.delay-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--warning-light);
+  border-top-color: var(--warning);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 /* ── Fade-in animation for groups ── */
@@ -888,6 +916,15 @@ textarea {
   }
 }
 
+/* ── Stats row (during progress) ── */
+.stats-row {
+  font-size: 11px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+}
+
 .progress-stats-row {
   display: flex;
   gap: 8px;
@@ -902,6 +939,17 @@ textarea {
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   font-weight: 500;
+}
+
+/* ── Invoice log entries ── */
+.invoice-log {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.invoice-log.expanded {
+  max-height: 300px;
 }
 
 .invoice-entry {
@@ -1055,7 +1103,6 @@ textarea {
   padding: 6px 12px;
   font-size: 12px;
   height: auto;
-  margin-bottom: 0;
 }
 
 .btn-secondary {
