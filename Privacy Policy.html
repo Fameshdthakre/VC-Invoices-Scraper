@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - VC Invoices Scraper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for a polished look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased leading-relaxed">
+
+    <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto bg-white shadow-sm rounded-xl p-8 sm:p-12 border border-gray-100">
+            
+            <header class="mb-10 text-center sm:text-left border-b border-gray-100 pb-8">
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight mb-3">Privacy Policy</h1>
+                <p class="text-lg text-gray-600">for <span class="font-semibold text-blue-600">VC Invoices Scraper</span></p>
+                <p class="text-sm text-gray-500 mt-4 font-medium">Effective Date: <time datetime="2026-05-12">May 12, 2026</time></p>
+            </header>
+
+            <main class="space-y-8">
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="bg-blue-100 text-blue-700 w-8 h-8 rounded-full inline-flex items-center justify-center text-sm mr-3">1</span>
+                        Introduction
+                    </h2>
+                    <p class="text-gray-700">
+                        VC Invoices Scraper ("we," "us," or "the extension") is committed to protecting your privacy. This Privacy Policy explains how we handle data within the Chrome extension.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="bg-blue-100 text-blue-700 w-8 h-8 rounded-full inline-flex items-center justify-center text-sm mr-3">2</span>
+                        Data Collection and Usage
+                    </h2>
+                    <p class="text-gray-700 mb-4">
+                        The extension is designed to scrape invoice data from Amazon Vendor Central for the sole purpose of exporting it to Excel or CSV formats for the user.
+                    </p>
+                    <ul class="list-disc pl-6 space-y-3 text-gray-700 marker:text-blue-500">
+                        <li><strong>No Personal Data Collection:</strong> We do not collect, store, or transmit any personally identifiable information (PII).</li>
+                        <li><strong>No External Transmission:</strong> All data scraping, processing, and file generation happen <em>locally</em> within your browser. No data is ever sent to our servers or any third-party services.</li>
+                        <li><strong>Amazon Data:</strong> The extension only accesses data on <code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-gray-800 font-mono">vendorcentral.amazon.com</code> when explicitly initiated by the user. This data is only used to generate the export files requested by the user.</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="bg-blue-100 text-blue-700 w-8 h-8 rounded-full inline-flex items-center justify-center text-sm mr-3">3</span>
+                        Storage
+                    </h2>
+                    <p class="text-gray-700 mb-4">The extension uses <code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-gray-800 font-mono">chrome.storage.local</code> to store:</p>
+                    <ul class="list-disc pl-6 space-y-3 text-gray-700 marker:text-blue-500">
+                        <li>User settings (e.g., UI theme, parallel tab count).</li>
+                        <li>Temporary scraping progress (to allow for session recovery in case of a browser crash). This data remains on your local machine and is not synced across devices unless you have enabled Chrome's native sync feature (and even then, only settings are synced, not scraped data).</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="bg-blue-100 text-blue-700 w-8 h-8 rounded-full inline-flex items-center justify-center text-sm mr-3">4</span>
+                        Third-Party Services
+                    </h2>
+                    <p class="text-gray-700">
+                        The extension does not use any third-party tracking, analytics, or advertising services. It uses the <code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-gray-800 font-mono">xlsx.full.min.js</code> (SheetJS) library locally to generate Excel files.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="bg-blue-100 text-blue-700 w-8 h-8 rounded-full inline-flex items-center justify-center text-sm mr-3">5</span>
+                        Permissions
+                    </h2>
+                    <p class="text-gray-700 mb-4">The extension requests only the permissions necessary for its core functionality:</p>
+                    <ul class="list-disc pl-6 space-y-3 text-gray-700 marker:text-blue-500">
+                        <li><strong>Scripting & Host Permissions:</strong> To read invoice tables on Vendor Central.</li>
+                        <li><strong>Tabs:</strong> To manage parallel scraping tabs.</li>
+                        <li><strong>Storage:</strong> To save your preferences and progress.</li>
+                        <li><strong>Offscreen & Alarms:</strong> To ensure the extension continues working during long-running tasks.</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="bg-blue-100 text-blue-700 w-8 h-8 rounded-full inline-flex items-center justify-center text-sm mr-3">6</span>
+                        Changes to This Policy
+                    </h2>
+                    <p class="text-gray-700">
+                        We may update this Privacy Policy from time to time. Any changes will be reflected by the "Effective Date" at the top of this page.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                        <span class="bg-blue-100 text-blue-700 w-8 h-8 rounded-full inline-flex items-center justify-center text-sm mr-3">7</span>
+                        Contact Us
+                    </h2>
+                    <p class="text-gray-700">
+                        If you have any questions about this Privacy Policy, please contact the developer through the Chrome Web Store support channel.
+                    </p>
+                </section>
+            </main>
+
+            <footer class="mt-12 pt-8 border-t border-gray-100 text-center text-gray-500 text-sm">
+                <p>&copy; 2026 VC Invoices Scraper. All rights reserved.</p>
+            </footer>
+
+        </div>
+    </div>
+
+</body>
+</html>
